@@ -23,6 +23,11 @@
       <div id="live-clock" class="text-xl font-mono bg-slate-700 px-4 py-2 rounded-lg">--:--:--</div>
     </header>
 
+    <!-- BANNIÈRE D'ALERTE DE DÉPASSEMENT -->
+    <div id="banner-depassement" class="hidden bg-red-600 text-white p-4 rounded-xl shadow-lg text-center font-bold text-lg animate-pulse">
+      ⚠️ ATTENTION : Un ou plusieurs agents ont dépassé leur temps de pause !
+    </div>
+
     <!-- SECTION AGENT : Pointer sa pause -->
     <section class="bg-white p-6 rounded-xl shadow-md space-y-4">
       <div class="flex justify-between items-center">
@@ -57,7 +62,6 @@
           <option value="HERINIAVO Robson Naomy">HERINIAVO Robson Naomy</option>
           <option value="LANTOHERINDRAINIBE Lafatra Voaary">LANTOHERINDRAINIBE Lafatra Voaary</option>
           <option value="MALALANIAINA Sahaza Louisa Regine">MALALANIAINA Sahaza Louisa Regine</option>
-
           <option value="MANITRA MALALASOA Fidinirina Patricia">MANITRA MALALASOA Fidinirina Patricia</option>
           <option value="MANOHISOA Mamie Dorisse">MANOHISOA Mamie Dorisse</option>
           <option value="MISIANJARA Geraldine">MISIANJARA Geraldine</option>
@@ -70,8 +74,7 @@
           <option value="RAJAONARISOA Alphonse Tahina">RAJAONARISOA Alphonse Tahina</option>
           <option value="RAKOTOARISOA Minonirina Princy">RAKOTOARISOA Minonirina Princy</option>
           <option value="RAKOTOARIVELO Landry Fabiana Jones">RAKOTOARIVELO Landry Fabiana Jones</option>
-
-          <option value="RAKOMAHEFA Fanomezantsoa Tojonirina">RAKOTOMAHEFA Fanomezantsoa Tojonirina</option>
+          <option value="RAKOTOMAHEFA Fanomezantsoa Tojonirina">RAKOTOMAHEFA Fanomezantsoa Tojonirina</option>
           <option value="RAKOTOMALALA Hasina Faneva">RAKOTOMALALA Hasina Faneva</option>
           <option value="RAKOTONDRASOA Tanjomisandratra Micka">RAKOTONDRASOA Tanjomisandratra Micka</option>
           <option value="RAKOTONDRATSIMBA Hariniaina">RAKOTONDRATSIMBA Hariniaina</option>
@@ -82,18 +85,14 @@
           <option value="RAMANANKOLAFY Henintsoa Jessica">RAMANANKOLAFY Henintsoa Jessica</option>
           <option value="RAMANARIVO Assemat Christian">RAMANARIVO Assemat Christian</option>
           <option value="RANAIVOSOA Mirana Jessica">RANAIVOSOA Mirana Jessica</option>
-
           <option value="RANDRIAMAMINTSOA Nirina Eugenia">RANDRIAMAMINTSOA Nirina Eugenia</option>
           <option value="RANDRIAMIALY Tsinana Fiononana Felicie Nazario">RANDRIAMIALY Tsinana Fiononana Felicie Nazario</option>
-
           <option value="RANDRIAMIFIDY Maminiaina">RANDRIAMIFIDY Maminiaina</option>
           <option value="RANDRIANARIMANANA Mialisoa Mendrika Fiderana">RANDRIANARIMANANA Mialisoa Mendrika Fiderana</option>
           <option value="RANDRIANASOLO Finoana Najoro">RANDRIANASOLO Finoana Najoro</option>
-
           <option value="RANDRIANJAFY Safidinirina">RANDRIANJAFY Safidinirina</option>
           <option value="RAOBELINA Fenitra Hiarivola">RAOBELINA Fenitra Hiarivola</option>
           <option value="RASAMIMANANA Tojonasaina Romarica">RASAMIMANANA Tojonasaina Romarica</option>
-
           <option value="RASENDRA Lantonirina">RASENDRA Lantonirina</option>
           <option value="RASOANANAHARY Rojovola">RASOANANAHARY Rojovola</option>
           <option value="RASOANANTENAINA Julienne Felicie">RASOANANTENAINA Julienne Felicie</option>
@@ -103,7 +102,6 @@
           <option value="RAVAKINIAINA Mihajatiana Fanirisoa">RAVAKINIAINA Mihajatiana Fanirisoa</option>
           <option value="RAVALITERANIRINA Anjatiana Fiderana">RAVALITERANIRINA Anjatiana Fiderana</option>
           <option value="RAZAFINDRAIBE Miora Fahendrena Antonio">RAZAFINDRAIBE Miora Fahendrena Antonio</option>
-
           <option value="RAZAFINDRANORO Miorasoa Patricia">RAZAFINDRANORO Miorasoa Patricia</option>
           <option value="RAZAFINTSALAMA Maminirina">RAZAFINTSALAMA Maminirina</option>
           <option value="RINASOA Zo Fiononana">RINASOA Zo Fiononana</option>
@@ -144,7 +142,7 @@
               <th class="p-3">Statut</th>
               <th class="p-3">Début de pause</th>
               <th class="p-3">Durée écoulée</th>
-              <th class="p-3">Action</th>
+              <th class="p-3">Action Vigie</th>
             </tr>
           </thead>
           <tbody id="agent-table-body" class="divide-y text-slate-700">
@@ -158,9 +156,15 @@
 
   <script>
     // -------------------------------------------------------------
-    // REMPLACEZ CE BLOC PAR VOS VRAIS IDENTIFIANTS FIREBASE
+    // PARAMÈTRES VIGIE
     // -------------------------------------------------------------
-const firebaseConfig = {
+    const CODE_VIGIE = "v1g13"; // MOT DE PASSE POUR SUPPRIMER UN AGENT (Changez-le si besoin)
+    const MAX_PAUSES_SIMULTANEES = 3;
+
+    // -------------------------------------------------------------
+    // CONFIGURATION FIREBASE
+    // -------------------------------------------------------------
+   const firebaseConfig = {
   apiKey: "AIzaSyDtNHt0rt7x3QDCVi3mcqZaa-DA0uWzECc",
   authDomain: "gestion-pauses-67153.firebaseapp.com",
   databaseURL: "https://gestion-pauses-67153-default-rtdb.firebaseio.com",
@@ -170,21 +174,36 @@ const firebaseConfig = {
   appId: "1:641733427029:web:828311069bfc4a2aa8b9dc"
 };
 
-    // QUOTA MAXIMAL DE PAUSES SIMULTANÉES (Ajustable si besoin)
-    const MAX_PAUSES_SIMULTANEES = 3;
-
     // Initialisation
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const agentsRef = db.ref("agents");
 
-    // Horloge
+    // Bip d'alerte audio via Web Audio API
+    function jouerBipAlerte() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Note A5
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {
+        // Ignoré si bloqué par le navigateur
+      }
+    }
+
+    // Horloge & Vérification des chronos
     setInterval(() => {
       document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('fr-FR');
       mettreAJourChronos();
     }, 1000);
 
-    // Fonction Agent
+    // Fonction Agent pour changer de statut
     function changerStatut(statut, dureeMax) {
       const name = document.getElementById('agentSelect').value;
       if (!name) {
@@ -196,7 +215,7 @@ const firebaseConfig = {
       const currentAgent = agentsData[agentKey];
       const countPauseActuel = Object.values(agentsData).filter(a => a.statut !== 'En ligne').length;
 
-      // Si l'agent tente de partir en pause alors que le quota de 3 est atteint
+      // Blocage si quota atteint
       if (statut !== 'En ligne' && (!currentAgent || currentAgent.statut === 'En ligne') && countPauseActuel >= MAX_PAUSES_SIMULTANEES) {
         alert("Impossible de partir en pause : le quota maximum de " + MAX_PAUSES_SIMULTANEES + " agents en pause est atteint.");
         return;
@@ -210,7 +229,7 @@ const firebaseConfig = {
       });
     }
 
-    // Écoute temps réel
+    // Écoute temps réel Firebase
     let agentsData = {};
     agentsRef.on('value', (snapshot) => {
       agentsData = snapshot.val() || {};
@@ -232,21 +251,24 @@ const firebaseConfig = {
         else countEnLigne++;
 
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50";
+        tr.id = `row-${id}`;
+        tr.className = "hover:bg-slate-50 transition";
 
         const heureDebut = agent.debut ? new Date(agent.debut).toLocaleTimeString('fr-FR') : '-';
         
         tr.innerHTML = `
           <td class="p-3 font-semibold">${agent.nom}</td>
           <td class="p-3">
-            <span class="px-2.5 py-1 rounded-full text-xs font-medium ${isEnPause ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+            <span id="badge-${id}" class="px-2.5 py-1 rounded-full text-xs font-medium ${isEnPause ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
               ${agent.statut}
             </span>
           </td>
           <td class="p-3">${heureDebut}</td>
           <td class="p-3 font-mono font-bold" id="timer-${id}">-</td>
           <td class="p-3">
-            <button onclick="supprimerAgent('${id}')" class="text-xs text-red-500 hover:underline">Supprimer</button>
+            <button onclick="supprimerAgentProrie('${id}')" class="text-xs bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 px-2 py-1 rounded border transition">
+              🔒 Retirer (Vigie)
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -257,7 +279,7 @@ const firebaseConfig = {
       document.getElementById('count-pause').innerText = `En pause: ${countPause}`;
       document.getElementById('count-pause-inline').innerText = countPause;
 
-      // GESTION DU QUOTA & DÉSACTIVATION DES BOUTONS
+      // Gestion visuelle du quota
       const btnCafé = document.getElementById('btn-pause-cafe');
       const btnDéjeuner = document.getElementById('btn-pause-dejeuner');
       const quotaAlert = document.getElementById('quota-alert');
@@ -275,13 +297,16 @@ const firebaseConfig = {
       mettreAJourChronos();
     }
 
-    // Chrono & alertes dépassement
+    // Gestion du chronomètre et des alertes de dépassement
     function mettreAJourChronos() {
       const maintenant = Date.now();
+      let auMoinsUnDepassement = false;
 
       for (let id in agentsData) {
         const agent = agentsData[id];
         const timerCell = document.getElementById(`timer-${id}`);
+        const rowCell = document.getElementById(`row-${id}`);
+        const badgeCell = document.getElementById(`badge-${id}`);
 
         if (agent.statut !== 'En ligne' && agent.debut && timerCell) {
           const secondesEcoulees = Math.floor((maintenant - agent.debut) / 1000);
@@ -291,18 +316,41 @@ const firebaseConfig = {
 
           timerCell.innerText = formatTemps;
 
+          // DÉPASSEMENT DÉTECTÉ
           if (minutes >= agent.dureeMax) {
-            timerCell.className = "p-3 font-mono font-bold text-red-600 animate-pulse";
+            auMoinsUnDepassement = true;
+            timerCell.className = "p-3 font-mono font-bold text-red-600 text-lg animate-pulse";
+            if (rowCell) rowCell.className = "bg-red-50 border-l-4 border-red-500";
+            if (badgeCell) {
+              badgeCell.innerText = "⚠️ DÉPASSEMENT !";
+              badgeCell.className = "px-2.5 py-1 rounded-full text-xs font-bold bg-red-600 text-white animate-bounce";
+            }
           } else {
             timerCell.className = "p-3 font-mono font-bold text-slate-700";
+            if (rowCell) rowCell.className = "hover:bg-slate-50 transition";
           }
         }
       }
+
+      // Afficher ou masquer la bannière rouge globale
+      const banner = document.getElementById('banner-depassement');
+      if (auMoinsUnDepassement) {
+        if (banner.classList.contains('hidden')) {
+          jouerBipAlerte(); // Émet un bip à la première détection
+        }
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
     }
 
-    function supprimerAgent(id) {
-      if(confirm("Retirer cet agent du tableau ?")) {
+    // Suppression sécurisée par code Vigie
+    function supprimerAgentProrie(id) {
+      const saisie = prompt("Accès Vigie requis.\nVeuillez saisir le mot de passe pour supprimer cet agent du tableau :");
+      if (saisie === CODE_VIGIE) {
         agentsRef.child(id).remove();
+      } else if (saisie !== null) {
+        alert("Mot de passe incorrect. Action annulée.");
       }
     }
   </script>
