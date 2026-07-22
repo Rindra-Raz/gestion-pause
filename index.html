@@ -1,19 +1,195 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi des Pauses - Plateau</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f8; }
-        h1 { color: #1f2937; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi Temps Réel des Pauses</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase App & Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
-<body>
-    <div class="card">
-        <h1>Dashboard Suivi des Pauses</h1>
-        <p>Le système de suivi en temps réel est en cours de configuration...</p>
-    </div>
+<body class="bg-slate-100 min-h-screen p-6 font-sans">
+
+  <div class="max-w-6xl mx-auto space-y-8">
+    
+    <!-- En-tête -->
+    <header class="bg-slate-800 text-white p-6 rounded-xl shadow-md flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold">Suivi des Pauses Plateau</h1>
+        <p class="text-slate-400 text-sm">Gestion des flux & temps réel</p>
+      </div>
+      <div id="live-clock" class="text-xl font-mono bg-slate-700 px-4 py-2 rounded-lg">--:--:--</div>
+    </header>
+
+    <!-- SECTION AGENT : Pointer sa pause -->
+    <section class="bg-white p-6 rounded-xl shadow-md space-y-4">
+      <h2 class="text-lg font-semibold text-slate-700">Espace Agent - Pointage</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input type="text" id="agentName" placeholder="Nom / Identifiant Agent" class="border p-2 rounded-lg w-full focus:ring-2 focus:ring-blue-500 outline-none">
+        
+        <button onclick="changerStatut('En ligne', 0)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium p-2 rounded-lg transition">
+          🟢 En Ligne / Prêt
+        </button>
+        <button onclick="changerStatut('Pause Café', 15)" class="bg-amber-500 hover:bg-amber-600 text-white font-medium p-2 rounded-lg transition">
+          ☕ Pause Café (15 min)
+        </button>
+        <button onclick="changerStatut('Pause Déjeuner', 45)" class="bg-orange-600 hover:bg-orange-700 text-white font-medium p-2 rounded-lg transition">
+          🍽️ Pause Déjeuner (45 min)
+        </button>
+      </div>
+    </section>
+
+    <!-- SECTION SUPERVISEUR / VIGIE : Suivi du plateau -->
+    <section class="bg-white p-6 rounded-xl shadow-md space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-slate-700">Tableau de Bord Vigie (Temps Réel)</h2>
+        <div class="flex gap-4 text-sm font-medium">
+          <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full" id="count-enligne">En ligne: 0</span>
+          <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full" id="count-pause">En pause: 0</span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-600 border-b text-sm">
+              <th class="p-3">Agent</th>
+              <th class="p-3">Statut</th>
+              <th class="p-3">Début de pause</th>
+              <th class="p-3">Durée écoulée</th>
+              <th class="p-3">Action</th>
+            </tr>
+          </thead>
+          <tbody id="agent-table-body" class="divide-y text-slate-700">
+            <!-- Les données s'affichent ici dynamiquement -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // REMPLACEZ CE BLOC PAR VOS VRAIS IDENTIFIANTS FIREBASE
+    // -------------------------------------------------------------
+    const firebaseConfig = {
+  apiKey: "AIzaSyDtNHt0rt7x3QDCVi3mcqZaa-DA0uWzECc",
+  authDomain: "gestion-pauses-67153.firebaseapp.com",
+  databaseURL: "https://gestion-pauses-67153-default-rtdb.firebaseio.com",
+  projectId: "gestion-pauses-67153",
+  storageBucket: "gestion-pauses-67153.firebasestorage.app",
+  messagingSenderId: "641733427029",
+  appId: "1:641733427029:web:828311069bfc4a2aa8b9dc"
+};
+
+    // Initialisation
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const agentsRef = db.ref("agents");
+
+    // Horloge
+    setInterval(() => {
+      document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('fr-FR');
+      mettreAJourChronos();
+    }, 1000);
+
+    // Fonction Agent
+    function changerStatut(statut, dureeMax) {
+      const name = document.getElementById('agentName').value.trim();
+      if (!name) {
+        alert("Veuillez saisir votre nom d'agent.");
+        return;
+      }
+
+      const agentKey = name.toLowerCase().replace(/\s+/g, '_');
+      agentsRef.child(agentKey).set({
+        nom: name,
+        statut: statut,
+        debut: statut === 'En ligne' ? null : Date.now(),
+        dureeMax: dureeMax
+      });
+    }
+
+    // Écoute temps réel
+    let agentsData = {};
+    agentsRef.on('value', (snapshot) => {
+      agentsData = snapshot.val() || {};
+      afficherAgents();
+    });
+
+    function afficherAgents() {
+      const tbody = document.getElementById('agent-table-body');
+      tbody.innerHTML = '';
+
+      let countEnLigne = 0;
+      let countPause = 0;
+
+      for (let id in agentsData) {
+        const agent = agentsData[id];
+        const isEnPause = agent.statut !== 'En ligne';
+
+        if (isEnPause) countPause++;
+        else countEnLigne++;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+
+        const heureDebut = agent.debut ? new Date(agent.debut).toLocaleTimeString('fr-FR') : '-';
+        
+        tr.innerHTML = `
+          <td class="p-3 font-semibold">${agent.nom}</td>
+          <td class="p-3">
+            <span class="px-2.5 py-1 rounded-full text-xs font-medium ${isEnPause ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+              ${agent.statut}
+            </span>
+          </td>
+          <td class="p-3">${heureDebut}</td>
+          <td class="p-3 font-mono font-bold" id="timer-${id}">-</td>
+          <td class="p-3">
+            <button onclick="supprimerAgent('${id}')" class="text-xs text-red-500 hover:underline">Supprimer</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      document.getElementById('count-enligne').innerText = `En ligne: ${countEnLigne}`;
+      document.getElementById('count-pause').innerText = `En pause: ${countPause}`;
+      mettreAJourChronos();
+    }
+
+    // Chrono & alertes dépassement
+    function mettreAJourChronos() {
+      const maintenant = Date.now();
+
+      for (let id in agentsData) {
+        const agent = agentsData[id];
+        const timerCell = document.getElementById(`timer-${id}`);
+
+        if (agent.statut !== 'En ligne' && agent.debut && timerCell) {
+          const secondesEcoulees = Math.floor((maintenant - agent.debut) / 1000);
+          const minutes = Math.floor(secondesEcoulees / 60);
+          const secondes = secondesEcoulees % 60;
+          const formatTemps = `${String(minutes).padStart(2, '0')}:${String(secondes).padStart(2, '0')}`;
+
+          timerCell.innerText = formatTemps;
+
+          if (minutes >= agent.dureeMax) {
+            timerCell.className = "p-3 font-mono font-bold text-red-600 animate-pulse";
+          } else {
+            timerCell.className = "p-3 font-mono font-bold text-slate-700";
+          }
+        }
+      }
+    }
+
+    function supprimerAgent(id) {
+      if(confirm("Retirer cet agent du tableau ?")) {
+        agentsRef.child(id).remove();
+      }
+    }
+  </script>
 </body>
 </html>
