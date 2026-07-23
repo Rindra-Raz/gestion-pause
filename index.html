@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suivi Temps Réel des Pauses </title>
+  <title>Suivi Temps Réel des Pauses</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase App & Database SDKs -->
@@ -17,8 +17,8 @@
     <!-- En-tête -->
     <header class="bg-slate-800 text-white p-6 rounded-xl shadow-md flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold">Suivi des Pauses Plateau YAS AE </h1>
-        <p class="text-slate-400 text-sm">Gestion des flux & temps réel par Rindra</p>
+        <h1 class="text-2xl font-bold">Suivi des Pauses Plateau yas</h1>
+        <p class="text-slate-400 text-sm">Gestion des flux & temps réel</p>
       </div>
       <div id="live-clock" class="text-xl font-mono bg-slate-700 px-4 py-2 rounded-lg">--:--:--</div>
     </header>
@@ -34,13 +34,13 @@
         <h2 class="text-lg font-semibold text-slate-700">Espace Agent - Pointage</h2>
         <!-- Alerte visuelle de quota -->
         <span id="quota-alert" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">
-          Quota pauses : <span id="count-pause-inline">0</span>/2
+          Quota pauses : <span id="count-pause-inline">0</span>/3
         </span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- Liste déroulante complète des agents -->
-        <select id="agentSelect" class="border p-2 rounded-lg w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+        <select id="agentSelect" onchange="afficherInfoAgentSelected()" class="border p-2 rounded-lg w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white">
           <option value="">-- Sélectionner votre nom --</option>
           <option value="ANDRIAMAHAZO Malala Cathy">ANDRIAMAHAZO Malala Cathy</option>
           <option value="ANDRIAMANGA Andraina Manoa">ANDRIAMANGA Andraina Manoa</option>
@@ -80,7 +80,7 @@
           <option value="RAKOTONDRATSIMBA Hariniaina">RAKOTONDRATSIMBA Hariniaina</option>
           <option value="RAKOTONDRAZANANY Tinah Miorasoa">RAKOTONDRAZANANY Tinah Miorasoa</option>
           <option value="RAKOTONIAINA Feno Nomena Nathalie">RAKOTONIAINA Feno Nomena Nathalie</option>
-         
+          <option value="RAKOTOSON Erudite">RAKOTOSON Erudite</option>
           <option value="RAKOTOZAFY Andrianarilala Thierry Judicaël">RAKOTOZAFY Andrianarilala Thierry Judicaël</option>
           <option value="RAMANANKOLAFY Henintsoa Jessica">RAMANANKOLAFY Henintsoa Jessica</option>
           <option value="RAMANARIVO Assemat Christian">RAMANARIVO Assemat Christian</option>
@@ -104,7 +104,7 @@
           <option value="RAZAFINDRAIBE Miora Fahendrena Antonio">RAZAFINDRAIBE Miora Fahendrena Antonio</option>
           <option value="RAZAFINDRANORO Miorasoa Patricia">RAZAFINDRANORO Miorasoa Patricia</option>
           <option value="RAZAFINTSALAMA Maminirina">RAZAFINTSALAMA Maminirina</option>
-         
+          <option value="RINASOA Zo Fiononana">RINASOA Zo Fiononana</option>
           <option value="RIVOARIJAONA Domoina Herizo Marcelle">RIVOARIJAONA Domoina Herizo Marcelle</option>
           <option value="SOLONIAINA Nanie Cynthia">SOLONIAINA Nanie Cynthia</option>
           <option value="TANTELINIAINA Haingotiana Sylvia">TANTELINIAINA Haingotiana Sylvia</option>
@@ -119,9 +119,12 @@
           ☕ Pause Café (15 min)
         </button>
         <button id="btn-pause-dejeuner" onclick="changerStatut('Pause Déjeuner', 60)" class="bg-orange-600 hover:bg-orange-700 text-white font-medium p-2 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed">
-          🍽️ Pause Déjeuner (60 min)
+          🍽️ Pause Déjeuner (<span id="txt-duree-dejeuner">60</span> min)
         </button>
       </div>
+      
+      <!-- Info de pénalité / déduction -->
+      <div id="info-deduction" class="hidden text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200"></div>
     </section>
 
     <!-- SECTION SUPERVISEUR / VIGIE : Suivi du plateau -->
@@ -141,6 +144,7 @@
               <th class="p-3">Agent</th>
               <th class="p-3">Statut</th>
               <th class="p-3">Début de pause</th>
+              <th class="p-3">Durée autorisée</th>
               <th class="p-3">Durée écoulée</th>
               <th class="p-3">Action Vigie</th>
             </tr>
@@ -152,19 +156,41 @@
       </div>
     </section>
 
+    <!-- NOUVELLE SECTION : Historique des Pauses Café 15 min -->
+    <section class="bg-white p-6 rounded-xl shadow-md space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-slate-700">☕ Historique des Pauses Café 15 min effectuées</h2>
+        <button onclick="effacerHistoriqueProrie()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded border">
+          Réinitialiser la journée (Vigie)
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-50 text-slate-600 border-b">
+              <th class="p-3">Agent</th>
+              <th class="p-3">Fin de Pause</th>
+              <th class="p-3">Durée totale prise</th>
+              <th class="p-3">Impact Déjeuner</th>
+            </tr>
+          </thead>
+          <tbody id="historique-table-body" class="divide-y text-slate-700">
+            <!-- Historique dynamique -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </div>
 
   <script>
-    // -------------------------------------------------------------
     // PARAMÈTRES VIGIE
-    // -------------------------------------------------------------
-    const CODE_VIGIE = "v1g13"; // MOT DE PASSE POUR SUPPRIMER UN AGENT (Changez-le si besoin)
+    const CODE_VIGIE = "1234";
     const MAX_PAUSES_SIMULTANEES = 3;
 
-    // -------------------------------------------------------------
     // CONFIGURATION FIREBASE
-    // -------------------------------------------------------------
-   const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyDtNHt0rt7x3QDCVi3mcqZaa-DA0uWzECc",
   authDomain: "gestion-pauses-67153.firebaseapp.com",
   databaseURL: "https://gestion-pauses-67153-default-rtdb.firebaseio.com",
@@ -174,37 +200,61 @@
   appId: "1:641733427029:web:828311069bfc4a2aa8b9dc"
 };
 
-    // Initialisation
+    // Initialisation Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const agentsRef = db.ref("agents");
+    const histoCafeRef = db.ref("historique_cafe");
 
-    // Bip d'alerte audio via Web Audio API
+    // Bip d'alerte audio
     function jouerBipAlerte() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Note A5
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.3);
-      } catch (e) {
-        // Ignoré si bloqué par le navigateur
-      }
+      } catch (e) {}
     }
 
-    // Horloge & Vérification des chronos
     setInterval(() => {
       document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('fr-FR');
       mettreAJourChronos();
     }, 1000);
 
-    // Fonction Agent pour changer de statut
-    function changerStatut(statut, dureeMax) {
+    // Quand l'agent sélectionne son nom, on adapte la durée de son déjeuner
+    function afficherInfoAgentSelected() {
+      const name = document.getElementById('agentSelect').value;
+      const infoBox = document.getElementById('info-deduction');
+      const txtDejeuner = document.getElementById('txt-duree-dejeuner');
+
+      if (!name) {
+        infoBox.classList.add('hidden');
+        txtDejeuner.innerText = "60";
+        return;
+      }
+
+      const agentKey = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const histo = historiqueCafeData[agentKey];
+
+      if (histo && histo.retardMinutes > 0) {
+        const nouvelleDureeDejeuner = Math.max(0, 60 - histo.retardMinutes);
+        txtDejeuner.innerText = nouvelleDureeDejeuner;
+        infoBox.innerHTML = `⚠️ <b>Attention ${name} :</b> Vous avez dépassé votre pause café de <b>${histo.retardMinutes} min</b>. Votre crédit pause déjeuner est ajusté à <b>${nouvelleDureeDejeuner} min</b>.`;
+        infoBox.classList.remove('hidden');
+      } else {
+        txtDejeuner.innerText = "60";
+        infoBox.classList.add('hidden');
+      }
+    }
+
+    // Changement de statut de l'agent
+    function changerStatut(statut, dureeMaxReference) {
       const name = document.getElementById('agentSelect').value;
       if (!name) {
         alert("Veuillez sélectionner votre nom dans la liste.");
@@ -215,25 +265,55 @@
       const currentAgent = agentsData[agentKey];
       const countPauseActuel = Object.values(agentsData).filter(a => a.statut !== 'En ligne').length;
 
-      // Blocage si quota atteint
+      // Quota
       if (statut !== 'En ligne' && (!currentAgent || currentAgent.statut === 'En ligne') && countPauseActuel >= MAX_PAUSES_SIMULTANEES) {
-        alert("Impossible de partir en pause : le quota maximum de " + MAX_PAUSES_SIMULTANEES + " agents en pause est atteint.");
+        alert("Impossible de partir en pause : quota maximum de " + MAX_PAUSES_SIMULTANEES + " agents atteint.");
         return;
+      }
+
+      // Calcul de la durée autorisée pour le déjeuner en tenant compte d'un retard éventuel sur la pause café
+      let dureeMaxFinale = dureeMaxReference;
+      if (statut === 'Pause Déjeuner') {
+        const histo = historiqueCafeData[agentKey];
+        if (histo && histo.retardMinutes > 0) {
+          dureeMaxFinale = Math.max(0, 60 - histo.retardMinutes);
+        }
+      }
+
+      // SI L'AGENT REVIENT DE PAUSE CAFÉ : Enregistrer dans l'historique et calculer le dépassement
+      if (statut === 'En ligne' && currentAgent && currentAgent.statut === 'Pause Café') {
+        const minutesPrises = Math.ceil((Date.now() - currentAgent.debut) / 60000);
+        const retard = Math.max(0, minutesPrises - 15);
+
+        histoCafeRef.child(agentKey).set({
+          nom: name,
+          heureFin: new Date().toLocaleTimeString('fr-FR'),
+          dureePrise: minutesPrises,
+          retardMinutes: retard
+        });
       }
 
       agentsRef.child(agentKey).set({
         nom: name,
         statut: statut,
         debut: statut === 'En ligne' ? null : Date.now(),
-        dureeMax: dureeMax
+        dureeMax: dureeMaxFinale
       });
     }
 
-    // Écoute temps réel Firebase
+    // ÉCOUTEUR FIREBASE - AGENTS EN TEMPS RÉEL
     let agentsData = {};
     agentsRef.on('value', (snapshot) => {
       agentsData = snapshot.val() || {};
       afficherAgents();
+    });
+
+    // ÉCOUTEUR FIREBASE - HISTORIQUE PAUSE CAFÉ
+    let historiqueCafeData = {};
+    histoCafeRef.on('value', (snapshot) => {
+      historiqueCafeData = snapshot.val() || {};
+      afficherHistoriqueCafe();
+      afficherInfoAgentSelected();
     });
 
     function afficherAgents() {
@@ -264,6 +344,7 @@
             </span>
           </td>
           <td class="p-3">${heureDebut}</td>
+          <td class="p-3 font-semibold text-slate-600">${isEnPause ? agent.dureeMax + ' min' : '-'}</td>
           <td class="p-3 font-mono font-bold" id="timer-${id}">-</td>
           <td class="p-3">
             <button onclick="supprimerAgentProrie('${id}')" class="text-xs bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 px-2 py-1 rounded border transition">
@@ -274,12 +355,10 @@
         tbody.appendChild(tr);
       }
 
-      // Mise à jour des compteurs
       document.getElementById('count-enligne').innerText = `En ligne: ${countEnLigne}`;
       document.getElementById('count-pause').innerText = `En pause: ${countPause}`;
       document.getElementById('count-pause-inline').innerText = countPause;
 
-      // Gestion visuelle du quota
       const btnCafé = document.getElementById('btn-pause-cafe');
       const btnDéjeuner = document.getElementById('btn-pause-dejeuner');
       const quotaAlert = document.getElementById('quota-alert');
@@ -297,7 +376,38 @@
       mettreAJourChronos();
     }
 
-    // Gestion du chronomètre et des alertes de dépassement
+    // Affichage de la table d'historique
+    function afficherHistoriqueCafe() {
+      const tbody = document.getElementById('historique-table-body');
+      tbody.innerHTML = '';
+
+      const liste = Object.values(historiqueCafeData);
+
+      if (liste.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-slate-400 italic text-center">Aucune pause café terminée aujourd'hui.</td></tr>`;
+        return;
+      }
+
+      liste.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+
+        let tagImpact = `<span class="text-emerald-600 font-semibold">Aucun (Déjeuner 60 min)</span>`;
+        if (item.retardMinutes > 0) {
+          tagImpact = `<span class="text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200"> Dépassé de ${item.retardMinutes} min ➔ Déjeuner réduit à ${Math.max(0, 60 - item.retardMinutes)} min</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="p-3 font-semibold">${item.nom}</td>
+          <td class="p-3 text-slate-600">${item.heureFin}</td>
+          <td class="p-3 font-mono">${item.dureePrise} min</td>
+          <td class="p-3">${tagImpact}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Mise à jour des chronomètres et des alarmes
     function mettreAJourChronos() {
       const maintenant = Date.now();
       let auMoinsUnDepassement = false;
@@ -316,7 +426,6 @@
 
           timerCell.innerText = formatTemps;
 
-          // DÉPASSEMENT DÉTECTÉ
           if (minutes >= agent.dureeMax) {
             auMoinsUnDepassement = true;
             timerCell.className = "p-3 font-mono font-bold text-red-600 text-lg animate-pulse";
@@ -332,11 +441,10 @@
         }
       }
 
-      // Afficher ou masquer la bannière rouge globale
       const banner = document.getElementById('banner-depassement');
       if (auMoinsUnDepassement) {
         if (banner.classList.contains('hidden')) {
-          jouerBipAlerte(); // Émet un bip à la première détection
+          jouerBipAlerte();
         }
         banner.classList.remove('hidden');
       } else {
@@ -344,13 +452,22 @@
       }
     }
 
-    // Suppression sécurisée par code Vigie
+    // Actions Vigie
     function supprimerAgentProrie(id) {
-      const saisie = prompt("Accès Vigie requis.\nVeuillez saisir le mot de passe pour supprimer cet agent du tableau :");
+      const saisie = prompt("Accès Vigie requis.\nSaisir le mot de passe pour retirer cet agent du tableau :");
       if (saisie === CODE_VIGIE) {
         agentsRef.child(id).remove();
       } else if (saisie !== null) {
-        alert("Mot de passe incorrect. Action annulée.");
+        alert("Mot de passe incorrect.");
+      }
+    }
+
+    function effacerHistoriqueProrie() {
+      const saisie = prompt("Accès Vigie requis.\nSaisir le mot de passe pour réinitialiser l'historique des pauses :");
+      if (saisie === CODE_VIGIE) {
+        histoCafeRef.remove();
+      } else if (saisie !== null) {
+        alert("Mot de passe incorrect.");
       }
     }
   </script>
